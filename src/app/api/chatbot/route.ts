@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
 import { getAuthUser } from "@/lib/api/helpers";
+import { isSupabaseConfigured } from "@/lib/mock-data";
 import { NextRequest, NextResponse } from "next/server";
 
 // Simple FAQ-based chatbot
@@ -72,7 +72,28 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Mock mode: return FAQ answers without logging to Supabase
+  if (!isSupabaseConfigured()) {
+    const answer = findAnswer(message);
+
+    if (answer) {
+      return NextResponse.json({
+        role: "bot",
+        message: answer,
+        escalated: false,
+      });
+    }
+
+    return NextResponse.json({
+      role: "bot",
+      message:
+        "죄송합니다. 해당 문의는 상담원에게 전달하겠습니다. 잠시만 기다려주세요.",
+      escalated: true,
+    });
+  }
+
   const user = await getAuthUser();
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
 
   // Log user message

@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
 import { requireAuth, errorResponse, successResponse } from "@/lib/api/helpers";
+import { isSupabaseConfigured, MOCK_PRODUCTS, MOCK_USER } from "@/lib/mock-data";
 import { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -20,6 +20,34 @@ export async function POST(request: NextRequest) {
     return errorResponse("별점은 1~5점 사이여야 합니다.");
   }
 
+  // Mock mode: return mock review
+  if (!isSupabaseConfigured()) {
+    const product = MOCK_PRODUCTS.find((p) => p.id === productId);
+    if (!product) return errorResponse("상품을 찾을 수 없습니다.");
+
+    const mockReview = {
+      id: `rev-mock-${Date.now()}`,
+      user_id: user!.id,
+      product_id: productId,
+      order_item_id: orderItemId,
+      rating,
+      content,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      users: { name: MOCK_USER.name },
+      review_images: images.length > 0
+        ? images.map((_, i) => ({
+            id: `ri-mock-${Date.now()}-${i}`,
+            url: `https://placehold.co/200x200?text=review-${i}`,
+            sort_order: i,
+          }))
+        : [],
+    };
+
+    return successResponse({ data: mockReview }, 201);
+  }
+
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
 
   // Check product exists

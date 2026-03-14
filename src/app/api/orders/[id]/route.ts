@@ -1,7 +1,7 @@
 import { requireAuth, errorResponse, successResponse } from "@/lib/api/helpers";
 import { getOrderById } from "@/lib/api/orders";
+import { isSupabaseConfigured, MOCK_ORDERS } from "@/lib/mock-data";
 import { NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 
 export async function GET(
   _request: NextRequest,
@@ -32,6 +32,20 @@ export async function PATCH(
 
   if (action !== "cancel") return errorResponse("지원하지 않는 액션입니다.");
 
+  // Mock mode: simulate order cancellation
+  if (!isSupabaseConfigured()) {
+    const order = MOCK_ORDERS.find((o) => o.id === id && o.user_id === user!.id);
+    if (!order) return errorResponse("주문을 찾을 수 없습니다.", 404);
+
+    const status = order.status as string;
+    if (status !== "payment_completed" && status !== "preparing") {
+      return errorResponse("배송 시작 후에는 취소할 수 없습니다.");
+    }
+
+    return successResponse({ message: "주문이 취소되었습니다." });
+  }
+
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
 
   const { data: order } = await supabase

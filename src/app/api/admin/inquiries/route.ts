@@ -1,10 +1,18 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin, errorResponse, successResponse } from "@/lib/api/helpers";
+import { isSupabaseConfigured, MOCK_INQUIRIES } from "@/lib/mock-data";
 import { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireAdmin();
   if (authError) return authError;
+
+  if (!isSupabaseConfigured()) {
+    return successResponse({
+      data: MOCK_INQUIRIES,
+      pagination: { page: 1, limit: 20, total: MOCK_INQUIRIES.length, totalPages: 1 },
+    });
+  }
 
   const { searchParams } = new URL(request.url);
   const page = parseInt(searchParams.get("page") ?? "1", 10);

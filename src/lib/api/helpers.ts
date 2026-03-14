@@ -1,7 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { isSupabaseConfigured, MOCK_USER, MOCK_ADMIN } from "@/lib/mock-data";
 
 export async function getAuthUser() {
+  if (!isSupabaseConfigured()) {
+    return { id: MOCK_USER.id, email: MOCK_USER.email } as { id: string; email: string };
+  }
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
   const {
     data: { user },
@@ -20,10 +24,14 @@ export async function requireAuth() {
 }
 
 export async function requireAdmin() {
+  if (!isSupabaseConfigured()) {
+    return { user: { id: MOCK_ADMIN.id, email: MOCK_ADMIN.email } as { id: string; email: string }, error: null };
+  }
   const user = await getAuthUser();
   if (!user) {
     return { user: null, error: NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 }) };
   }
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
   const { data: profile } = await supabase
     .from("users")

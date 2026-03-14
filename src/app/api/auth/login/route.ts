@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { isSupabaseConfigured, MOCK_USER } from "@/lib/mock-data";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -12,6 +12,24 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Mock mode: return mock user without Supabase
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json({
+      message: "로그인 성공",
+      user: {
+        id: MOCK_USER.id,
+        email: MOCK_USER.email,
+        user_metadata: { name: MOCK_USER.name },
+      },
+      session: {
+        access_token: "mock-access-token",
+        refresh_token: "mock-refresh-token",
+        expires_in: 3600,
+      },
+    });
+  }
+
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
 
   const { data, error } = await supabase.auth.signInWithPassword({

@@ -1,9 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin, errorResponse, successResponse } from "@/lib/api/helpers";
+import { isSupabaseConfigured, MOCK_DASHBOARD } from "@/lib/mock-data";
 
 export async function GET() {
   const { error: authError } = await requireAdmin();
   if (authError) return authError;
+
+  if (!isSupabaseConfigured()) {
+    return successResponse(MOCK_DASHBOARD);
+  }
 
   const supabase = await createClient();
   const today = new Date();

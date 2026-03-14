@@ -1,10 +1,44 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin, errorResponse, successResponse } from "@/lib/api/helpers";
+import { isSupabaseConfigured, MOCK_ORDERS } from "@/lib/mock-data";
 import { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireAdmin();
   if (authError) return authError;
+
+  if (!isSupabaseConfigured()) {
+    const totalSales = MOCK_ORDERS.reduce((sum, o) => sum + o.total_amount, 0);
+    const totalDiscounts = MOCK_ORDERS.reduce((sum, o) => sum + o.discount_amount, 0);
+    const totalShipping = MOCK_ORDERS.reduce((sum, o) => sum + o.shipping_fee, 0);
+    const netRevenue = MOCK_ORDERS.reduce((sum, o) => sum + o.final_amount, 0);
+    const commissionRate = 0.03;
+    const commissionAmount = Math.floor(netRevenue * commissionRate);
+    const productSales: Record<string, { name: string; quantity: number; revenue: number }> = {};
+    MOCK_ORDERS.forEach((order) => {
+      order.order_items.forEach((item) => {
+        if (!productSales[item.product_name]) {
+          productSales[item.product_name] = { name: item.product_name, quantity: 0, revenue: 0 };
+        }
+        productSales[item.product_name].quantity += item.quantity;
+        productSales[item.product_name].revenue += item.total_price;
+      });
+    });
+    return successResponse({
+      summary: {
+        total_orders: MOCK_ORDERS.length,
+        total_sales: totalSales,
+        total_discounts: totalDiscounts,
+        total_shipping: totalShipping,
+        net_revenue: netRevenue,
+        commission_rate: commissionRate,
+        commission_amount: commissionAmount,
+        settlement_amount: netRevenue - commissionAmount,
+      },
+      product_sales: Object.values(productSales).sort((a, b) => b.revenue - a.revenue),
+      orders: MOCK_ORDERS,
+    });
+  }
 
   const { searchParams } = new URL(request.url);
   const startDate = searchParams.get("start_date");

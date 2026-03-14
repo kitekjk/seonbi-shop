@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin, errorResponse, successResponse } from "@/lib/api/helpers";
+import { isSupabaseConfigured } from "@/lib/mock-data";
 import { NextRequest } from "next/server";
 
 export async function PUT(
@@ -8,6 +9,12 @@ export async function PUT(
 ) {
   const { error: authError } = await requireAdmin();
   if (authError) return authError;
+
+  if (!isSupabaseConfigured()) {
+    const { id } = await params;
+    const body = await request.json();
+    return successResponse({ data: { id, ...body } });
+  }
 
   const { id } = await params;
   const body = await request.json();
@@ -45,6 +52,10 @@ export async function DELETE(
 ) {
   const { error: authError } = await requireAdmin();
   if (authError) return authError;
+
+  if (!isSupabaseConfigured()) {
+    return successResponse({ message: "쿠폰이 삭제되었습니다." });
+  }
 
   const { id } = await params;
   const supabase = await createClient();

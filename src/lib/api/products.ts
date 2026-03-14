@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { isSupabaseConfigured, MOCK_PRODUCTS } from "@/lib/mock-data";
 
 export async function getProducts({
   page = 1,
@@ -9,6 +9,17 @@ export async function getProducts({
   limit?: number;
   category?: string;
 }) {
+  if (!isSupabaseConfigured()) {
+    let filtered = MOCK_PRODUCTS.filter((p) => p.is_active);
+    if (category) {
+      filtered = filtered.filter((p) => p.category === category);
+    }
+    const from = (page - 1) * limit;
+    const sliced = filtered.slice(from, from + limit);
+    return { data: sliced, error: null, count: filtered.length, page, limit };
+  }
+
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
   const from = (page - 1) * limit;
   const to = from + limit - 1;
@@ -32,6 +43,12 @@ export async function getProducts({
 }
 
 export async function getProductById(id: string) {
+  if (!isSupabaseConfigured()) {
+    const product = MOCK_PRODUCTS.find((p) => p.id === id && p.is_active);
+    return { data: product ?? null, error: product ? null : "Not found" };
+  }
+
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
 
   const { data: product, error } = await supabase
@@ -51,11 +68,25 @@ export async function getProductById(id: string) {
 }
 
 export async function searchProducts(query: string, page = 1, limit = 20) {
+  if (!isSupabaseConfigured()) {
+    const q = query.toLowerCase();
+    const filtered = MOCK_PRODUCTS.filter(
+      (p) =>
+        p.is_active &&
+        (p.name.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q) ||
+          p.product_tags.some((t) => t.tag.toLowerCase().includes(q)))
+    );
+    const from = (page - 1) * limit;
+    const sliced = filtered.slice(from, from + limit);
+    return { data: sliced, error: null, count: sliced.length, page, limit };
+  }
+
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  // Search by name, description, or tag
   const { data, error, count } = await supabase
     .from("products")
     .select(
@@ -67,7 +98,6 @@ export async function searchProducts(query: string, page = 1, limit = 20) {
     .order("created_at", { ascending: false })
     .range(from, to);
 
-  // Also search by tags
   const { data: tagProducts } = await supabase
     .from("product_tags")
     .select("product_id")
@@ -75,7 +105,6 @@ export async function searchProducts(query: string, page = 1, limit = 20) {
 
   const tagProductIds = tagProducts?.map((t) => t.product_id) ?? [];
 
-  // Merge results - if tag matches found additional products
   let allProducts = data ?? [];
   if (tagProductIds.length > 0) {
     const existingIds = new Set(allProducts.map((p) => p.id));

@@ -1,10 +1,23 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin, errorResponse, successResponse } from "@/lib/api/helpers";
+import { isSupabaseConfigured, MOCK_PRODUCTS } from "@/lib/mock-data";
 import { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireAdmin();
   if (authError) return authError;
+
+  if (!isSupabaseConfigured()) {
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") ?? "1", 10);
+    const limit = parseInt(searchParams.get("limit") ?? "20", 10);
+    const from = (page - 1) * limit;
+    const paginatedProducts = MOCK_PRODUCTS.slice(from, from + limit);
+    return successResponse({
+      data: paginatedProducts,
+      pagination: { page, limit, total: MOCK_PRODUCTS.length, totalPages: Math.ceil(MOCK_PRODUCTS.length / limit) },
+    });
+  }
 
   const { searchParams } = new URL(request.url);
   const page = parseInt(searchParams.get("page") ?? "1", 10);
@@ -34,6 +47,19 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const { error: authError } = await requireAdmin();
   if (authError) return authError;
+
+  if (!isSupabaseConfigured()) {
+    const body = await request.json();
+    return successResponse({
+      data: {
+        id: `prod-mock-${Date.now()}`,
+        ...body,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    }, 201);
+  }
 
   const body = await request.json();
   const { name, slug, description, detail_html, base_price, category, options, images, tags } = body;

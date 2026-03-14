@@ -1,9 +1,21 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import {
+  isSupabaseConfigured,
+  getMockCart,
+  addMockCartItem,
+  updateMockCartQuantity,
+  removeMockCartItem,
+  clearMockCart,
+} from "@/lib/mock-data";
 
 async function getAuthUserId(): Promise<string | null> {
+  if (!isSupabaseConfigured()) {
+    const { MOCK_USER } = await import("@/lib/mock-data");
+    return MOCK_USER.id;
+  }
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
   const {
     data: { user },
@@ -12,9 +24,14 @@ async function getAuthUserId(): Promise<string | null> {
 }
 
 export async function getCart() {
+  if (!isSupabaseConfigured()) {
+    return { data: getMockCart(), error: null };
+  }
+
   const userId = await getAuthUserId();
   if (!userId) return { error: "로그인이 필요합니다.", data: null };
 
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("cart_items")
@@ -33,14 +50,20 @@ export async function addToCart(
   quantity: number = 1,
   optionId?: string
 ) {
+  if (!isSupabaseConfigured()) {
+    const result = addMockCartItem(productId, quantity, optionId);
+    if (!result.error) revalidatePath("/cart");
+    return result;
+  }
+
   const userId = await getAuthUserId();
   if (!userId) return { error: "로그인이 필요합니다." };
 
   if (quantity < 1) return { error: "수량은 1개 이상이어야 합니다." };
 
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
 
-  // Check if product exists and is active
   const { data: product } = await supabase
     .from("products")
     .select("id")
@@ -50,7 +73,6 @@ export async function addToCart(
 
   if (!product) return { error: "상품을 찾을 수 없습니다." };
 
-  // Check option stock if option specified
   if (optionId) {
     const { data: option } = await supabase
       .from("product_options")
@@ -63,7 +85,6 @@ export async function addToCart(
     if (option.stock < quantity) return { error: "재고가 부족합니다." };
   }
 
-  // Check if already in cart
   const { data: cartRows } = await supabase
     .from("cart_items")
     .select("*")
@@ -95,11 +116,18 @@ export async function addToCart(
 }
 
 export async function updateCartQuantity(cartItemId: string, quantity: number) {
+  if (!isSupabaseConfigured()) {
+    const result = updateMockCartQuantity(cartItemId, quantity);
+    revalidatePath("/cart");
+    return result;
+  }
+
   const userId = await getAuthUserId();
   if (!userId) return { error: "로그인이 필요합니다." };
 
   if (quantity < 1) return { error: "수량은 1개 이상이어야 합니다." };
 
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -115,9 +143,16 @@ export async function updateCartQuantity(cartItemId: string, quantity: number) {
 }
 
 export async function removeFromCart(cartItemId: string) {
+  if (!isSupabaseConfigured()) {
+    const result = removeMockCartItem(cartItemId);
+    revalidatePath("/cart");
+    return result;
+  }
+
   const userId = await getAuthUserId();
   if (!userId) return { error: "로그인이 필요합니다." };
 
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -133,9 +168,16 @@ export async function removeFromCart(cartItemId: string) {
 }
 
 export async function clearCart() {
+  if (!isSupabaseConfigured()) {
+    const result = clearMockCart();
+    revalidatePath("/cart");
+    return result;
+  }
+
   const userId = await getAuthUserId();
   if (!userId) return { error: "로그인이 필요합니다." };
 
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
 
   const { error } = await supabase

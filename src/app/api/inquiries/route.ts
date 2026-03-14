@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
 import { requireAuth, errorResponse, successResponse } from "@/lib/api/helpers";
+import { isSupabaseConfigured } from "@/lib/mock-data";
 import { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -17,6 +17,25 @@ export async function POST(request: NextRequest) {
     return errorResponse("유효하지 않은 문의 유형입니다.");
   }
 
+  // Mock mode: return mock inquiry
+  if (!isSupabaseConfigured()) {
+    const mockInquiry = {
+      id: `inq-mock-${Date.now()}`,
+      user_id: user!.id,
+      type,
+      title,
+      content,
+      product_id: product_id ?? null,
+      order_id: order_id ?? null,
+      status: "pending",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    return successResponse({ data: mockInquiry }, 201);
+  }
+
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
 
   const { data, error } = await supabase

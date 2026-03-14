@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { isSupabaseConfigured, MOCK_ORDERS } from "@/lib/mock-data";
 
 // Mock delivery tracking statuses with timestamps
 function generateMockTracking(trackingNumber: string, createdAt: string) {
@@ -78,6 +78,34 @@ export async function GET(
 ) {
   const { trackingNumber } = await params;
 
+  // Mock mode: find shipment in mock orders
+  if (!isSupabaseConfigured()) {
+    let shipment: { tracking_number: string | null; carrier: string; created_at: string } | null = null;
+    let orderCreatedAt: string | null = null;
+
+    for (const order of MOCK_ORDERS) {
+      const found = order.shipments.find((s) => s.tracking_number === trackingNumber);
+      if (found) {
+        shipment = found;
+        orderCreatedAt = order.created_at;
+        break;
+      }
+    }
+
+    if (!shipment) {
+      return NextResponse.json(
+        { error: "운송장 번호를 찾을 수 없습니다." },
+        { status: 404 }
+      );
+    }
+
+    const createdAt = orderCreatedAt ?? shipment.created_at;
+    const tracking = generateMockTracking(trackingNumber, createdAt);
+
+    return NextResponse.json({ data: tracking });
+  }
+
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
 
   const { data: shipment } = await supabase

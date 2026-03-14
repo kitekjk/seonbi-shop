@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin, errorResponse, successResponse } from "@/lib/api/helpers";
+import { isSupabaseConfigured } from "@/lib/mock-data";
 import { NextRequest } from "next/server";
 
 export async function POST(
@@ -8,6 +9,22 @@ export async function POST(
 ) {
   const { user, error: authError } = await requireAdmin();
   if (authError) return authError;
+
+  if (!isSupabaseConfigured()) {
+    const { id: inquiryId } = await params;
+    const body = await request.json();
+    const { content } = body;
+    return successResponse({
+      data: {
+        id: `reply-mock-${Date.now()}`,
+        inquiry_id: inquiryId,
+        user_id: user!.id,
+        content: content?.trim() ?? "",
+        created_at: new Date().toISOString(),
+        users: { name: "관리자" },
+      },
+    }, 201);
+  }
 
   const { id: inquiryId } = await params;
   const body = await request.json();

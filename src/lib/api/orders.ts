@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { isSupabaseConfigured, MOCK_ORDERS } from "@/lib/mock-data";
 
 export function generateOrderNumber(): string {
   const now = new Date();
@@ -12,6 +12,14 @@ export function generateTransactionId(): string {
 }
 
 export async function getUserOrders(userId: string, page = 1, limit = 20) {
+  if (!isSupabaseConfigured()) {
+    const userOrders = MOCK_ORDERS.filter((o) => o.user_id === userId);
+    const from = (page - 1) * limit;
+    const sliced = userOrders.slice(from, from + limit);
+    return { data: sliced, error: null, count: userOrders.length, page, limit };
+  }
+
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
   const from = (page - 1) * limit;
   const to = from + limit - 1;
@@ -30,6 +38,12 @@ export async function getUserOrders(userId: string, page = 1, limit = 20) {
 }
 
 export async function getOrderById(orderId: string, userId: string) {
+  if (!isSupabaseConfigured()) {
+    const order = MOCK_ORDERS.find((o) => o.id === orderId && o.user_id === userId);
+    return { data: order ?? null, error: order ? null : "Not found" };
+  }
+
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
 
   const { data, error } = await supabase
