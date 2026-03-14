@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { isSupabaseConfigured, MOCK_USER, MOCK_ADMIN } from "@/lib/mock-data";
 
 export async function getAuthUser() {
   if (!isSupabaseConfigured()) {
-    return { id: MOCK_USER.id, email: MOCK_USER.email } as { id: string; email: string };
+    const cookieStore = await cookies();
+    const mockAuth = cookieStore.get("mock-auth");
+    if (!mockAuth) return null;
+    try {
+      return JSON.parse(mockAuth.value) as { id: string; email: string; name?: string };
+    } catch {
+      return null;
+    }
   }
   const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
@@ -25,7 +33,15 @@ export async function requireAuth() {
 
 export async function requireAdmin() {
   if (!isSupabaseConfigured()) {
-    return { user: { id: MOCK_ADMIN.id, email: MOCK_ADMIN.email } as { id: string; email: string }, error: null };
+    const user = await getAuthUser();
+    if (!user) {
+      return { user: null, error: NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 }) };
+    }
+    // In mock mode, check if user is the mock admin
+    if (user.id === MOCK_ADMIN.id) {
+      return { user, error: null };
+    }
+    return { user: null, error: NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 }) };
   }
   const user = await getAuthUser();
   if (!user) {

@@ -4,7 +4,7 @@ import { Pagination } from "@/components/pagination";
 import type { ProductCardProps } from "@/components/product-card";
 import { getProducts } from "@/lib/api/products";
 
-const CATEGORIES = ["전체", "도자기", "공예품", "패션소품", "문구", "소품"];
+const CATEGORIES = ["전체", "도자기", "한지공예", "전통주잔", "한복", "액세서리"];
 const PAGE_SIZE = 8;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

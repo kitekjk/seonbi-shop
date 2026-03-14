@@ -14,7 +14,8 @@ export async function POST(request: NextRequest) {
 
   // Mock mode: return mock user without Supabase
   if (!isSupabaseConfigured()) {
-    return NextResponse.json({
+    const mockUser = { id: MOCK_USER.id, email: MOCK_USER.email, name: MOCK_USER.name };
+    const response = NextResponse.json({
       message: "로그인 성공",
       user: {
         id: MOCK_USER.id,
@@ -27,6 +28,13 @@ export async function POST(request: NextRequest) {
         expires_in: 3600,
       },
     });
+    response.cookies.set("mock-auth", JSON.stringify(mockUser), {
+      path: "/",
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+    return response;
   }
 
   const { createClient } = await import("@/lib/supabase/server");

@@ -54,17 +54,22 @@ export default function MyPage() {
 
   useEffect(() => {
     Promise.all([
+      fetch("/api/auth/me").then((r) => r.json()).catch(() => ({ user: null })),
       fetch("/api/reviews?my=true").then((r) => r.json()).catch(() => ({ data: [] })),
       fetch("/api/coupons/my").then((r) => r.json()).catch(() => ({ data: [] })),
       fetch("/api/inquiries/my").then((r) => r.json()).catch(() => ({ data: [] })),
-    ]).then(([reviewsRes, couponsRes, inquiriesRes]) => {
+    ]).then(([authRes, reviewsRes, couponsRes, inquiriesRes]) => {
+      if (!authRes.user) {
+        router.push("/login");
+        return;
+      }
+      setUser({ name: authRes.user.name ?? "회원", email: authRes.user.email ?? "" });
       setReviews(reviewsRes.data ?? []);
       setCoupons(couponsRes.data ?? []);
       setInquiries(inquiriesRes.data ?? []);
-      setUser({ name: "회원", email: "" });
       setLoading(false);
     });
-  }, []);
+  }, [router]);
 
   const handleDeleteReview = async (reviewId: string) => {
     if (!confirm("리뷰를 삭제하시겠습니까?")) return;

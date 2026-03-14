@@ -104,7 +104,7 @@ export default async function HomePage() {
                 최대 30% 할인 + 무료배송 쿠폰 증정!
               </p>
               <Link
-                href="/events/1"
+                href="/events/event-001"
                 className="mt-6 inline-block rounded-lg bg-white px-6 py-2.5 text-sm font-semibold text-brand-red transition-colors hover:bg-red-50"
               >
                 이벤트 참여하기
@@ -123,9 +123,9 @@ export default async function HomePage() {
         <div className="mt-8 grid grid-cols-4 gap-6">
           {[
             { emoji: "🏺", name: "도자기", href: "/products?category=도자기" },
-            { emoji: "🎨", name: "공예품", href: "/products?category=공예품" },
-            { emoji: "👘", name: "패션소품", href: "/products?category=패션소품" },
-            { emoji: "📝", name: "문구", href: "/products?category=문구" },
+            { emoji: "📜", name: "한지공예", href: "/products?category=한지공예" },
+            { emoji: "🍶", name: "전통주잔", href: "/products?category=전통주잔" },
+            { emoji: "👘", name: "한복", href: "/products?category=한복" },
           ].map((cat) => (
             <Link
               key={cat.name}
